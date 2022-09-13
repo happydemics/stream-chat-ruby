@@ -25,6 +25,7 @@ module StreamChat
 
     DEFAULT_BASE_URL = 'https://chat.stream-io-api.com'
     DEFAULT_TIMEOUT = 6.0
+    DEFAULT_POOL_SIZE = 5
 
     sig { returns(String) }
     attr_reader :api_key
@@ -40,7 +41,7 @@ module StreamChat
     # @param [string] api_key your application api_key
     # @param [string] api_secret your application secret
     # @param [float] timeout the timeout for the http requests
-    # @param [Hash] options extra options such as base_url
+    # @param [Hash] options extra options such as base_url, pool_size
     #
     # @example initialized the client with a timeout setting
     #   StreamChat::Client.new('my_key', 'my_secret', 3.0)
@@ -54,11 +55,12 @@ module StreamChat
       @timeout = T.let(timeout&.to_f || DEFAULT_TIMEOUT, Float)
       @auth_token = T.let(JWT.encode({ server: true }, @api_secret, 'HS256'), String)
       @base_url = T.let(options[:base_url] || DEFAULT_BASE_URL, String)
+      pool_size = T.let(options[:pool_size] || DEFAULT_POOL_SIZE, Integer)
       conn = Faraday.new(@base_url) do |faraday|
         faraday.options[:open_timeout] = @timeout
         faraday.options[:timeout] = @timeout
         faraday.request :multipart
-        faraday.adapter :net_http_persistent, pool_size: 5 do |http|
+        faraday.adapter :net_http_persistent, pool_size: pool_size do |http|
           # AWS load balancer idle timeout is 60 secs, so let's make it 59
           http.idle_timeout = 59
         end
